@@ -1,23 +1,26 @@
 # ==============================================================================
-# Credit Score Classifier - Makefile (vitrine)
+# Credit Score Classifier - Makefile
 # Problematique : predire si un client a un bon score de credit (Good=1 / Other=0)
-# Dataset       : ../data/dataset_train.csv (Kaggle - Credit Score Classification)
+# Dataset       : src/data/dataset.csv (Kaggle - Credit Score Classification)
 #
-# Ce Makefile delegue l'execution au projet de travail (todo/).
-# Le code source est dans : ../mlops-iabd-esgi/todo/mlproject/
+# Environnement : venv gere par uv dans ../mlops-iabd-esgi/todo/.venv
 # ==============================================================================
 
-TODO := ../mlops-iabd-esgi/todo
+VENV        := ../mlops-iabd-esgi/todo/.venv
+PYTHON      := $(VENV)/bin/python
+TODO        := ../mlops-iabd-esgi/todo
+SRC         := src
 
-# Hyperparametres (surchargeables via CLI : make train C=0.5)
-C             ?= 1.0
-MAX_ITER      ?= 1000
-CV            ?= 5
+# Hyperparametres (surchargeables : make train-models CV=5)
+CV            ?= 3
 SCORING       ?= roc_auc
 N_TRIALS      ?= 30
+C             ?= 1.0
+MAX_ITER      ?= 1000
 API_HOST      ?= 127.0.0.1
 API_PORT      ?= 8000
 FRONTEND_PORT ?= 8501
+MLFLOW_PORT   ?= 5000
 
 CYAN  := $(shell printf '\033[36m')
 RESET := $(shell printf '\033[0m')
@@ -25,9 +28,8 @@ RESET := $(shell printf '\033[0m')
 .DEFAULT_GOAL := help
 
 .PHONY: help install sync lock reset-env doctor \
-        data train train-optuna train-models \
-        mlflow api frontend \
-        docker-build docker-run docker-up docker-down \
+        mlflow train-models train-optuna train \
+        api frontend \
         lint format type test check
 
 
@@ -44,7 +46,7 @@ help: ## Liste des commandes disponibles
 # Environnement
 # ==============================================================================
 
-install: ## Installe les dependances dans todo/ (uv sync --extra dev)
+install: ## Installe les dependances (uv sync --extra dev dans todo/)
 	$(MAKE) -C $(TODO) install
 
 sync: install ## Alias de install
@@ -52,31 +54,42 @@ sync: install ## Alias de install
 lock: ## Regenere uv.lock dans todo/
 	$(MAKE) -C $(TODO) lock
 
-reset-env: ## Reinitialise completement l'environnement dans todo/
+reset-env: ## Reinitialise completement l'environnement
 	$(MAKE) -C $(TODO) reset-env
 
-doctor: ## Diagnostique l'environnement (versions des librairies)
+doctor: ## Diagnostique les versions des librairies
 	$(MAKE) -C $(TODO) doctor
+
+
+# ==============================================================================
+# MLflow
+# ==============================================================================
+
+mlflow: ## Demarre le serveur MLflow sur le port $(MLFLOW_PORT)
+	cd $(TODO) && uv run mlflow server \
+	    --host 127.0.0.1 --port $(MLFLOW_PORT) \
+	    --backend-store-uri sqlite:///mlflow.db \
+	    --artifacts-destination ./mlflow-artifacts \
+	    --allowed-hosts "*"
 
 
 # ==============================================================================
 # Pipeline ML
 # ==============================================================================
 
-data: ## Prepare ../data/dataset.csv (nettoyage + binarisation Credit_Score)
-	$(MAKE) -C $(TODO) data
-
 train: ## Entraine la baseline LogisticRegression (C=.. MAX_ITER=..)
-	$(MAKE) -C $(TODO) train C=$(C) MAX_ITER=$(MAX_ITER)
+	PYTHONPATH=$(SRC) $(PYTHON) -m train C=$(C) MAX_ITER=$(MAX_ITER)
 
-train-optuna: ## Optimise avec Optuna (N_TRIALS=.. CV=.. SCORING=..)
-	$(MAKE) -C $(TODO) train-optuna N_TRIALS=$(N_TRIALS) CV=$(CV) SCORING=$(SCORING)
+train-models: ## Compare RF / XGBoost / LightGBM via GridSearchCV + SHAP (CV=.. SCORING=..)
+	PYTHONPATH=$(SRC) $(PYTHON) -m train_models --cv $(CV) --scoring $(SCORING)
 
-train-models: ## Compare RF / XGBoost / LightGBM via GridSearchCV + SHAP
-	$(MAKE) -C $(TODO) train-models CV=$(CV) SCORING=$(SCORING)
+train-optuna: ## Optimise avec Optuna TPE (N_TRIALS=.. CV=..)
+	PYTHONPATH=$(SRC) $(PYTHON) -m train_optuna --n-trials $(N_TRIALS) --cv $(CV)
 
-mlflow: ## Demarre le serveur MLflow
-	$(MAKE) -C $(TODO) mlflow
+
+# ==============================================================================
+# Services
+# ==============================================================================
 
 api: ## Lance l'API FastAPI (API_HOST / API_PORT)
 	$(MAKE) -C $(TODO) api API_HOST=$(API_HOST) API_PORT=$(API_PORT)
@@ -86,36 +99,19 @@ frontend: ## Lance le frontend Streamlit (FRONTEND_PORT)
 
 
 # ==============================================================================
-# Docker
-# ==============================================================================
-
-docker-build: ## Construit l'image d'entrainement
-	$(MAKE) -C $(TODO) docker-build
-
-docker-run: ## Entraine en conteneur
-	$(MAKE) -C $(TODO) docker-run
-
-docker-up: ## Demarre la stack complete (mlflow + api + frontend)
-	$(MAKE) -C $(TODO) docker-up
-
-docker-down: ## Arrete et supprime les conteneurs
-	$(MAKE) -C $(TODO) docker-down
-
-
-# ==============================================================================
 # Qualite du code
 # ==============================================================================
 
-lint: ## Verifie le style (ruff)
-	$(MAKE) -C $(TODO) lint
+lint: ## Verifie le style avec ruff
+	$(VENV)/bin/ruff check $(SRC)/
 
-format: ## Formate le code (ruff)
-	$(MAKE) -C $(TODO) format
+format: ## Formate le code avec ruff
+	$(VENV)/bin/ruff format $(SRC)/
 
-type: ## Verifie les types (mypy)
-	$(MAKE) -C $(TODO) type
+type: ## Verifie les types avec mypy
+	$(VENV)/bin/mypy $(SRC)/
 
-test: ## Lance les tests (pytest)
-	$(MAKE) -C $(TODO) test
+test: ## Lance les tests avec pytest
+	PYTHONPATH=$(SRC) $(VENV)/bin/pytest
 
 check: lint type test ## Pipeline qualite complete (lint + types + tests)

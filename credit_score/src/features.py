@@ -38,7 +38,7 @@ def _clean_numeric(X: np.ndarray) -> np.ndarray:
 def build_preprocessor() -> ColumnTransformer:
     # Numerique : nettoyage -> imputation mediane -> normalisation
     numeric_pipeline = Pipeline([
-        ("clean",   FunctionTransformer(_clean_numeric)),
+        ("clean",   FunctionTransformer(_clean_numeric, feature_names_out="one-to-one")),
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler",  StandardScaler()),
     ])

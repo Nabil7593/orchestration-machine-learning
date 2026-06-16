@@ -55,3 +55,18 @@ RANDOM_STATE = 42
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "credit-score-baseline")
 MODEL_NAME = os.getenv("MODEL_NAME", "credit-score-classifier")
+
+MLFLOW_EXPERIMENT_DESCRIPTION = (
+    "Classification binaire du score de credit (Good=1 / Standard-Poor=0). "
+    "Dataset Kaggle - 100 000 clients, 20 features, desequilibre 18% Good. "
+    "Comparaison Random Forest / XGBoost / LightGBM avec GridSearchCV. "
+    "Metrique principale : roc_auc."
+)
+
+MLFLOW_EXPERIMENT_TAGS: dict[str, str] = {
+    "project": "credit-score-classification",
+    "team": "mlops-esgi",
+    "dataset": "kaggle-credit-score",
+    "task": "binary-classification",
+    "models": "random_forest,xgboost,lightgbm",
+}
