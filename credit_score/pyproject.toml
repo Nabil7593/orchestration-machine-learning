@@ -3,7 +3,7 @@ name = "credit-score-classifier"
 version = "0.1.0"
 description = "Classification binaire du score de credit (Good vs Standard/Poor) - Projet MLOps ESGI"
 authors = [{ name = "Nabil Sarker", email = "sharkar.nabil@gmail.com" }]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
   # Data
   "pandas>=2.0",
@@ -43,11 +43,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.build.targets.wheel]
-packages = ["mlproject"]
+[tool.setuptools]
+py-modules = []
 
 [tool.ruff]
 line-length = 100
