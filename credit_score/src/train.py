@@ -4,13 +4,13 @@ Seance 5 - TP MLflow Tracking
     Ce script entraine et evalue un modele SANS aucun suivi d'experience.
     Votre mission : instrumenter cet entrainement avec MLflow (voir les TODO).
 """
+
 from __future__ import annotations
 
 import argparse
 
 import joblib
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
@@ -30,10 +30,12 @@ from features import binarize_target, build_preprocessor
 
 
 def build_model(c: float = 1.0, max_iter: int = 1000) -> Pipeline:
-    return Pipeline([
-        ("preprocessor", build_preprocessor()),
-        ("clf", LogisticRegression(C=c, max_iter=max_iter, class_weight="balanced")),
-    ])
+    return Pipeline(
+        [
+            ("preprocessor", build_preprocessor()),
+            ("clf", LogisticRegression(C=c, max_iter=max_iter, class_weight="balanced")),
+        ]
+    )
 
 
 def train(c: float = 1.0, max_iter: int = 1000) -> dict:
@@ -42,11 +44,12 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     df = binarize_target(df)
     x_train, x_test, y_train, y_test = split(df)
 
-    print(f"\n{'='*50}")
-    print(f"  Credit Score Classifier - Baseline")
-    print(f"{'='*50}")
+    print(f"\n{'=' * 50}")
+    print("  Credit Score Classifier - Baseline")
+    print(f"{'=' * 50}")
     print(f"Train : {x_train.shape[0]} lignes  |  Test : {x_test.shape[0]} lignes")
-    print(f"Classes - 0 (Standard/Poor) : {(y_test == 0).sum()}  |  1 (Good) : {(y_test == 1).sum()}")
+    n0, n1 = (y_test == 0).sum(), (y_test == 1).sum()
+    print(f"Classes - 0 (Standard/Poor) : {n0}  |  1 (Good) : {n1}")
 
     # TODO (S5-2) : configurer l'URI de tracking et l'experience
     # TODO (S5-3) : ouvrir un run MLflow (with mlflow.start_run())
@@ -61,14 +64,14 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     preds = (proba >= 0.5).astype(int)
 
     metrics = {
-        "f1":       float(f1_score(y_test, preds)),
-        "roc_auc":  float(roc_auc_score(y_test, proba)),
+        "f1": float(f1_score(y_test, preds)),
+        "roc_auc": float(roc_auc_score(y_test, proba)),
     }
 
-    print(f"\n{'─'*50}")
+    print(f"\n{'─' * 50}")
     print(f"  f1       = {metrics['f1']:.4f}")
     print(f"  roc_auc  = {metrics['roc_auc']:.4f}")
-    print(f"{'─'*50}")
+    print(f"{'─' * 50}")
     print("\nRapport de classification :")
     print(classification_report(y_test, preds, target_names=["Standard/Poor", "Good"]))
 
@@ -112,8 +115,8 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Baseline Credit Score Classifier")
-    parser.add_argument("--c",        type=float, default=1.0,  help="Regularisation LogisticRegression")
-    parser.add_argument("--max-iter", type=int,   default=1000, help="Iterations max")
+    parser.add_argument("--c", type=float, default=1.0, help="Regularisation LogisticRegression")
+    parser.add_argument("--max-iter", type=int, default=1000, help="Iterations max")
     args = parser.parse_args()
     train(c=args.c, max_iter=args.max_iter)
 

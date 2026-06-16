@@ -13,6 +13,7 @@ Lancement :
     PYTHONPATH=src python -m train_optuna --n-trials 20 --cv 3
     PYTHONPATH=src python -m train_optuna --no-mlflow
 """
+
 from __future__ import annotations
 
 import argparse
@@ -68,9 +69,9 @@ def build_model_specs() -> list[ModelSpec]:
         ModelSpec(
             name="random_forest",
             suggest_params=lambda trial: {
-                "n_estimators":      trial.suggest_int("n_estimators", 100, 300),
-                "max_depth":         trial.suggest_categorical("max_depth", [None, 10, 20, 30]),
-                "min_samples_leaf":  trial.suggest_int("min_samples_leaf", 1, 5),
+                "n_estimators": trial.suggest_int("n_estimators", 100, 300),
+                "max_depth": trial.suggest_categorical("max_depth", [None, 10, 20, 30]),
+                "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5),
             },
             build_estimator=lambda params: RandomForestClassifier(
                 random_state=RANDOM_STATE,
@@ -82,8 +83,8 @@ def build_model_specs() -> list[ModelSpec]:
         ModelSpec(
             name="xgboost",
             suggest_params=lambda trial: {
-                "n_estimators":  trial.suggest_int("n_estimators", 100, 300),
-                "max_depth":     trial.suggest_int("max_depth", 3, 10),
+                "n_estimators": trial.suggest_int("n_estimators", 100, 300),
+                "max_depth": trial.suggest_int("max_depth", 3, 10),
                 "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
             },
             build_estimator=lambda params: XGBClassifier(
@@ -97,10 +98,10 @@ def build_model_specs() -> list[ModelSpec]:
         ModelSpec(
             name="lightgbm",
             suggest_params=lambda trial: {
-                "n_estimators":  trial.suggest_int("n_estimators", 50, 300),
-                "num_leaves":    trial.suggest_int("num_leaves", 15, 127),
+                "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+                "num_leaves": trial.suggest_int("num_leaves", 15, 127),
                 "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-                "max_depth":     trial.suggest_int("max_depth", 3, 12),
+                "max_depth": trial.suggest_int("max_depth", 3, 12),
             },
             build_estimator=lambda params: cast(
                 ClassifierMixin,
@@ -116,10 +117,12 @@ def build_model_specs() -> list[ModelSpec]:
 
 
 def build_pipeline(estimator: ClassifierMixin) -> Pipeline:
-    return Pipeline([
-        ("preprocessor", build_preprocessor()),
-        ("clf", estimator),
-    ])
+    return Pipeline(
+        [
+            ("preprocessor", build_preprocessor()),
+            ("clf", estimator),
+        ]
+    )
 
 
 def objective(trial, spec: ModelSpec, x_train, y_train, cv: int) -> float:
@@ -170,7 +173,10 @@ def optimize_family(
 
     logger.info(
         "%s : cv_roc_auc=%.3f  test_roc_auc=%.3f  params=%s",
-        spec.name, study.best_value, test_roc_auc, study.best_params,
+        spec.name,
+        study.best_value,
+        test_roc_auc,
+        study.best_params,
     )
     return FamilyResult(
         spec=spec,
@@ -198,12 +204,12 @@ def describe_registered_version(
     )
     client.update_model_version(name=name, version=str(version), description=description)
     tags = {
-        "model_family":   result.spec.name,
-        "search_method":  "optuna-tpe",
-        "n_trials":       str(n_trials),
-        "cv":             str(cv),
-        "cv_roc_auc":     f"{result.study.best_value:.4f}",
-        "test_roc_auc":   f"{result.test_roc_auc:.4f}",
+        "model_family": result.spec.name,
+        "search_method": "optuna-tpe",
+        "n_trials": str(n_trials),
+        "cv": str(cv),
+        "cv_roc_auc": f"{result.study.best_value:.4f}",
+        "test_roc_auc": f"{result.test_roc_auc:.4f}",
     }
     for key, value in tags.items():
         client.set_model_version_tag(name=name, version=str(version), key=key, value=value)
@@ -241,9 +247,9 @@ def log_family_to_mlflow(
 
         report_dict = cast(dict, classification_report(y_test, result.preds, output_dict=True))
         mlflow.log_dict(report_dict, "classification_report.json")
-        report_text = cast(str, classification_report(
-            y_test, result.preds, target_names=["Standard/Poor", "Good"]
-        ))
+        report_text = cast(
+            str, classification_report(y_test, result.preds, target_names=["Standard/Poor", "Good"])
+        )
         mlflow.log_text(report_text, "classification_report.txt")
         logger.info("\n%s", report_text)
 
@@ -307,11 +313,14 @@ def optimize(n_trials: int = 30, cv: int = 5, use_mlflow: bool = True) -> list[F
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Optimisation Optuna RF / XGBoost / LightGBM - Credit Score")
-    parser.add_argument("--n-trials", type=int, default=30, help="Nombre d'essais Optuna par famille")
-    parser.add_argument("--cv",       type=int, default=5,  help="Nombre de plis de validation croisee")
-    parser.add_argument("--no-mlflow", dest="use_mlflow", action="store_false",
-                        help="Desactive le suivi MLflow")
+    parser = argparse.ArgumentParser(
+        description="Optimisation Optuna RF / XGBoost / LightGBM - Credit Score"
+    )
+    parser.add_argument("--n-trials", type=int, default=30, help="Nombre d'essais Optuna")
+    parser.add_argument("--cv", type=int, default=5, help="Nombre de plis de validation croisee")
+    parser.add_argument(
+        "--no-mlflow", dest="use_mlflow", action="store_false", help="Desactive le suivi MLflow"
+    )
     args = parser.parse_args()
     optimize(n_trials=args.n_trials, cv=args.cv, use_mlflow=args.use_mlflow)
 

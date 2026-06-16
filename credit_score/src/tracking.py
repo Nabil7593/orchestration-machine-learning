@@ -5,6 +5,7 @@ Seance 5 - TP MLflow Tracking (suite)
     chaque script d'entrainement, et ajoute la tracabilite des donnees
     (dataset lineage).
 """
+
 from __future__ import annotations
 
 import logging

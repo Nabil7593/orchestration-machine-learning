@@ -14,6 +14,7 @@ Lancement :
     PYTHONPATH=src python -m train_models --cv 3 --scoring roc_auc
     PYTHONPATH=src python -m train_models --no-mlflow
 """
+
 from __future__ import annotations
 
 import argparse
@@ -82,7 +83,7 @@ def build_model_specs() -> list[ModelSpec]:
             ),
             param_grid={
                 "clf__n_estimators": [100, 200],
-                "clf__max_depth":    [None, 10, 20],
+                "clf__max_depth": [None, 10, 20],
                 "clf__min_samples_leaf": [1, 2],
             },
         ),
@@ -95,8 +96,8 @@ def build_model_specs() -> list[ModelSpec]:
                 n_jobs=-1,
             ),
             param_grid={
-                "clf__n_estimators":  [100, 200],
-                "clf__max_depth":     [3, 5],
+                "clf__n_estimators": [100, 200],
+                "clf__max_depth": [3, 5],
                 "clf__learning_rate": [0.1, 0.01],
             },
         ),
@@ -108,8 +109,8 @@ def build_model_specs() -> list[ModelSpec]:
                 verbose=-1,
             ),
             param_grid={
-                "clf__n_estimators":  [100, 200],
-                "clf__num_leaves":    [31, 63],
+                "clf__n_estimators": [100, 200],
+                "clf__num_leaves": [31, 63],
                 "clf__learning_rate": [0.1, 0.01],
             },
         ),
@@ -117,10 +118,12 @@ def build_model_specs() -> list[ModelSpec]:
 
 
 def build_pipeline(estimator: ClassifierMixin) -> Pipeline:
-    return Pipeline([
-        ("preprocessor", build_preprocessor()),
-        ("clf", estimator),
-    ])
+    return Pipeline(
+        [
+            ("preprocessor", build_preprocessor()),
+            ("clf", estimator),
+        ]
+    )
 
 
 @dataclass
@@ -170,7 +173,11 @@ def optimize_model(
     )
     logger.info(
         "%s -> cv_%s=%.4f  f1=%.4f  roc_auc=%.4f",
-        spec.name, scoring, result.cv_score, result.f1, result.roc_auc,
+        spec.name,
+        scoring,
+        result.cv_score,
+        result.f1,
+        result.roc_auc,
     )
     return result
 
@@ -188,11 +195,13 @@ def log_run_to_mlflow(
 
         # S7-4a : hyperparametres et metriques
         mlflow.log_params({"cv": cv, "scoring": scoring, **result.best_params})
-        mlflow.log_metrics({
-            f"cv_{scoring}": result.cv_score,
-            "f1":            result.f1,
-            "roc_auc":       result.roc_auc,
-        })
+        mlflow.log_metrics(
+            {
+                f"cv_{scoring}": result.cv_score,
+                "f1": result.f1,
+                "roc_auc": result.roc_auc,
+            }
+        )
 
         # Matrice de confusion
         cm = confusion_matrix(y_test, result.preds)
@@ -205,9 +214,9 @@ def log_run_to_mlflow(
         # Rapport de classification
         report_dict = cast(dict, classification_report(y_test, result.preds, output_dict=True))
         mlflow.log_dict(report_dict, "classification_report.json")
-        report_text = cast(str, classification_report(
-            y_test, result.preds, target_names=["Standard/Poor", "Good"]
-        ))
+        report_text = cast(
+            str, classification_report(y_test, result.preds, target_names=["Standard/Poor", "Good"])
+        )
         mlflow.log_text(report_text, "classification_report.txt")
         logger.info("\n%s", report_text)
 
@@ -264,11 +273,17 @@ def train_all(cv: int = 5, scoring: str = "roc_auc", use_mlflow: bool = True) ->
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Comparaison RF / XGBoost / LightGBM - Credit Score")
-    parser.add_argument("--cv",      type=int, default=5,        help="Nombre de plis CV")
+    parser = argparse.ArgumentParser(
+        description="Comparaison RF / XGBoost / LightGBM - Credit Score"
+    )
+    parser.add_argument("--cv", type=int, default=5, help="Nombre de plis CV")
     parser.add_argument("--scoring", type=str, default="roc_auc", help="Metrique GridSearchCV")
-    parser.add_argument("--no-mlflow", dest="use_mlflow", action="store_false",
-                        help="Desactive MLflow (sans serveur de tracking)")
+    parser.add_argument(
+        "--no-mlflow",
+        dest="use_mlflow",
+        action="store_false",
+        help="Desactive MLflow (sans serveur de tracking)",
+    )
     args = parser.parse_args()
     train_all(cv=args.cv, scoring=args.scoring, use_mlflow=args.use_mlflow)
 

@@ -7,6 +7,7 @@ Toutes les transformations sont ici :
   - Categoriel  (4 col.) : imputation mode -> OneHotEncoder
   - Reste (ID, Name, SSN...) : supprime (remainder='drop')
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -37,22 +38,26 @@ def _clean_numeric(X: np.ndarray) -> np.ndarray:
 
 def build_preprocessor() -> ColumnTransformer:
     # Numerique : nettoyage -> imputation mediane -> normalisation
-    numeric_pipeline = Pipeline([
-        ("clean",   FunctionTransformer(_clean_numeric, feature_names_out="one-to-one")),
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler",  StandardScaler()),
-    ])
+    numeric_pipeline = Pipeline(
+        [
+            ("clean", FunctionTransformer(_clean_numeric, feature_names_out="one-to-one")),
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
 
     # Categoriel : imputation mode -> encodage one-hot
-    categorical_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-    ])
+    categorical_pipeline = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+        ]
+    )
 
     return ColumnTransformer(
         transformers=[
-            ("num", numeric_pipeline,     NUMERIC_FEATURES),
+            ("num", numeric_pipeline, NUMERIC_FEATURES),
             ("cat", categorical_pipeline, CATEGORICAL_FEATURES),
         ],
-        remainder="drop",   # supprime ID, Name, SSN, Type_of_Loan, Credit_History_Age...
+        remainder="drop",  # supprime ID, Name, SSN, Type_of_Loan, Credit_History_Age...
     )
