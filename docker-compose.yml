@@ -25,7 +25,7 @@ services:
       --serve-artifacts
       --allowed-hosts "*"
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - mlflow_data:/mlflow
 
