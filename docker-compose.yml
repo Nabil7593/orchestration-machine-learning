@@ -1,0 +1,89 @@
+# Stack complète - Credit Score Classifier
+#
+# Commandes (depuis la racine du depot) :
+#   docker compose up -d mlflow
+#   docker compose --profile train run --rm train
+#   docker compose up -d api
+#   docker compose up -d frontend       # necessite src/app.py (Streamlit)
+#
+# -> API      : http://localhost:8000/docs
+# -> MLflow   : http://localhost:5000
+# -> Frontend : http://localhost:8501
+
+services:
+
+  # --------------------------------------------------------------------------
+  # Serveur MLflow (suivi des experiences et model registry)
+  # --------------------------------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.13.0
+    command: >
+      mlflow server
+      --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --allowed-hosts "*"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+
+  # --------------------------------------------------------------------------
+  # Entrainement one-shot (profil "train" : ne demarre pas avec `up`)
+  # --------------------------------------------------------------------------
+  train:
+    build:
+      context: credit_score/
+      dockerfile: ../docker/Dockerfile.train
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      - mlflow
+    volumes:
+      - models_data:/app/models
+    profiles:
+      - train
+
+  # --------------------------------------------------------------------------
+  # API FastAPI d'inference
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: credit_score/
+      dockerfile: ../docker/Dockerfile.api
+    # S14-1 : port
+    ports:
+      - "8000:8000"
+    # S14-2 : volume models en lecture seule (modele produit par train)
+    volumes:
+      - models_data:/app/models:ro
+    # S14-3 : healthcheck sur /health
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # Frontend Streamlit (necessite credit_score/src/app.py)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: credit_score/
+      dockerfile: ../docker/Dockerfile.frontend
+    # S14-4 : URL de l'API resolue par le nom de service Docker interne
+    environment:
+      API_URL: http://api:8000
+    # S14-5 : port
+    ports:
+      - "8501:8501"
+    # S14-6 : attend que l'API soit saine avant de demarrer
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mlflow_data:
+  models_data:
