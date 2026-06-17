@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir .
 
 # Copier le code source (contient src/app.py)
 COPY src/ ./src/
+COPY frontend/ ./frontend/
 
 EXPOSE 8501
-CMD ["streamlit", "run", "src/app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+CMD ["streamlit", "run", "frontend/app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]

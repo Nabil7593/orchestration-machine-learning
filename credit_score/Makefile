@@ -98,7 +98,7 @@ api: ## Lance l'API FastAPI sur http://$(API_HOST):$(API_PORT)/docs
 	    --host $(API_HOST) --port $(API_PORT)
 
 frontend: ## Lance le frontend Streamlit (FRONTEND_PORT)
-	PYTHONPATH=$(SRC) $(VENV)/bin/streamlit run src/app.py \
+	$(VENV)/bin/streamlit run frontend/app.py \
 	    --server.port $(FRONTEND_PORT)
 
 
