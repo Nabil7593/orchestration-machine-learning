@@ -120,6 +120,12 @@ docker-down: ## Arrete tous les services (conserve les donnees)
 docker-reset: ## Arrete tous les services ET efface les volumes
 	$(COMPOSE) down -v
 
+docker-train-models: ## Lance RF/XGBoost/LightGBM GridSearchCV dans Docker (logue dans MLflow)
+	$(COMPOSE) --profile train-models run --rm train-models
+
+docker-train-optuna: ## Lance Optuna RF/XGBoost/LightGBM dans Docker (logue dans MLflow)
+	$(COMPOSE) --profile train-optuna run --rm train-optuna
+
 airflow: ## Demarre Airflow (UI sur http://localhost:8080, login: admin)
 	$(COMPOSE) --profile airflow up -d airflow
 

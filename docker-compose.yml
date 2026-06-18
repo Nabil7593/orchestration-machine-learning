@@ -45,6 +45,42 @@ services:
       - train
 
   # --------------------------------------------------------------------------
+  # Comparaison RF / XGBoost / LightGBM avec GridSearchCV (profil "train-models")
+  # --------------------------------------------------------------------------
+  train-models:
+    build:
+      context: credit_score/
+      dockerfile: ../docker/Dockerfile.train
+    command: ["python", "-m", "train_models", "--cv", "3", "--scoring", "roc_auc"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MPLBACKEND: Agg
+    depends_on:
+      - mlflow
+    volumes:
+      - models_data:/app/models
+    profiles:
+      - train-models
+
+  # --------------------------------------------------------------------------
+  # Optimisation Optuna RF / XGBoost / LightGBM (profil "train-optuna")
+  # --------------------------------------------------------------------------
+  train-optuna:
+    build:
+      context: credit_score/
+      dockerfile: ../docker/Dockerfile.train
+    command: ["python", "-m", "train_optuna", "--n-trials", "10", "--cv", "3"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MPLBACKEND: Agg
+    depends_on:
+      - mlflow
+    volumes:
+      - models_data:/app/models
+    profiles:
+      - train-optuna
+
+  # --------------------------------------------------------------------------
   # API FastAPI d'inference
   # --------------------------------------------------------------------------
   api:
