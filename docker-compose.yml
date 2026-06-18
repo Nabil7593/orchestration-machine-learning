@@ -84,6 +84,35 @@ services:
       api:
         condition: service_healthy
 
+  # --------------------------------------------------------------------------
+  # Airflow (re-entrainement planifie - profil "airflow")
+  # --------------------------------------------------------------------------
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: credit-score-airflow-secret
+      PYTHONPATH: /app/src
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MPLBACKEND: Agg
+    volumes:
+      - ./credit_score/dags:/opt/airflow/dags
+      - ./credit_score/src:/app/src
+      - models_data:/app/models
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: standalone
+    depends_on:
+      - mlflow
+    profiles:
+      - airflow
+
 volumes:
   mlflow_data:
   models_data:
+  airflow_logs:

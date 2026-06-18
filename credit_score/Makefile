@@ -38,7 +38,10 @@ RESET := $(shell printf '\033[0m')
 
 .DEFAULT_GOAL := help
 
+COMPOSE := docker compose -f ../docker-compose.yml
+
 .PHONY: help install api mlflow train train-models train-optuna \
+        workflow-docker docker-down docker-reset airflow airflow-password \
         lint format type test check
 
 
@@ -100,6 +103,28 @@ api: ## Lance l'API FastAPI sur http://$(API_HOST):$(API_PORT)/docs
 frontend: ## Lance le frontend Streamlit (FRONTEND_PORT)
 	$(VENV)/bin/streamlit run frontend/app.py \
 	    --server.port $(FRONTEND_PORT)
+
+
+# ==============================================================================
+# Docker
+# ==============================================================================
+
+workflow-docker: ## Lance la stack complete : mlflow -> train -> api + frontend
+	$(COMPOSE) up -d mlflow
+	$(COMPOSE) --profile train run --rm train
+	$(COMPOSE) up -d api frontend
+
+docker-down: ## Arrete tous les services (conserve les donnees)
+	$(COMPOSE) down
+
+docker-reset: ## Arrete tous les services ET efface les volumes
+	$(COMPOSE) down -v
+
+airflow: ## Demarre Airflow (UI sur http://localhost:8080, login: admin)
+	$(COMPOSE) --profile airflow up -d airflow
+
+airflow-password: ## Affiche le mot de passe admin Airflow
+	$(COMPOSE) exec airflow cat /opt/airflow/standalone_admin_password.txt
 
 
 # ==============================================================================
