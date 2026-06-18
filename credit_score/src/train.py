@@ -47,7 +47,7 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     n0, n1 = (y_test == 0).sum(), (y_test == 1).sum()
     print(f"Classes - 0 (Standard/Poor) : {n0}  |  1 (Good) : {n1}")
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///tmp/mlflow"))
     mlflow.set_experiment("credit-score-baseline")
 
     with mlflow.start_run():
