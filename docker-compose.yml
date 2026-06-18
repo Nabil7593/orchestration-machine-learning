@@ -21,13 +21,13 @@ services:
       mlflow server
       --host 0.0.0.0 --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
-      --artifacts-destination /mlflow/artifacts
-      --serve-artifacts
+      --default-artifact-root /mlflow/artifacts
       --allowed-hosts "*"
     ports:
       - "5001:5000"
     volumes:
       - mlflow_data:/mlflow
+    restart: unless-stopped
 
   # --------------------------------------------------------------------------
   # Entrainement one-shot (profil "train" : ne demarre pas avec `up`)
