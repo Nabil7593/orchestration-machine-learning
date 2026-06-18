@@ -1,16 +1,14 @@
-"""Entrainement du modele baseline - Credit Score Classification.
-
-Seance 5 - TP MLflow Tracking
-    Ce script entraine et evalue un modele SANS aucun suivi d'experience.
-    Votre mission : instrumenter cet entrainement avec MLflow (voir les TODO).
-"""
+"""Entrainement du modele baseline - Credit Score Classification."""
 
 from __future__ import annotations
 
 import argparse
+import os
 
 import joblib
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
@@ -25,8 +23,6 @@ from sklearn.pipeline import Pipeline
 from config import MODEL_DIR
 from data import load_data, split
 from features import binarize_target, build_preprocessor
-
-# TODO (S5-1) : importer mlflow et mlflow.sklearn
 
 
 def build_model(c: float = 1.0, max_iter: int = 1000) -> Pipeline:
@@ -51,64 +47,66 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     n0, n1 = (y_test == 0).sum(), (y_test == 1).sum()
     print(f"Classes - 0 (Standard/Poor) : {n0}  |  1 (Good) : {n1}")
 
-    # TODO (S5-2) : configurer l'URI de tracking et l'experience
-    # TODO (S5-3) : ouvrir un run MLflow (with mlflow.start_run())
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_experiment("credit-score-baseline")
 
-    # --- Entrainement ---
-    model = build_model(c=c, max_iter=max_iter)
-    print(f"\nEntrainement LogisticRegression (C={c}, max_iter={max_iter})...")
-    model.fit(x_train, y_train)
+    with mlflow.start_run():
+        mlflow.log_params({"C": c, "max_iter": max_iter, "model": "LogisticRegression"})
 
-    # --- Evaluation ---
-    proba = model.predict_proba(x_test)[:, 1]
-    preds = (proba >= 0.5).astype(int)
+        # --- Entrainement ---
+        model = build_model(c=c, max_iter=max_iter)
+        print(f"\nEntrainement LogisticRegression (C={c}, max_iter={max_iter})...")
+        model.fit(x_train, y_train)
 
-    metrics = {
-        "f1": float(f1_score(y_test, preds)),
-        "roc_auc": float(roc_auc_score(y_test, proba)),
-    }
+        # --- Evaluation ---
+        proba = model.predict_proba(x_test)[:, 1]
+        preds = (proba >= 0.5).astype(int)
 
-    print(f"\n{'─' * 50}")
-    print(f"  f1       = {metrics['f1']:.4f}")
-    print(f"  roc_auc  = {metrics['roc_auc']:.4f}")
-    print(f"{'─' * 50}")
-    print("\nRapport de classification :")
-    print(classification_report(y_test, preds, target_names=["Standard/Poor", "Good"]))
+        metrics = {
+            "f1": float(f1_score(y_test, preds)),
+            "roc_auc": float(roc_auc_score(y_test, proba)),
+        }
 
-    # --- Matrice de confusion ---
-    cm = confusion_matrix(y_test, preds)
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        print(f"\n{'─' * 50}")
+        print(f"  f1       = {metrics['f1']:.4f}")
+        print(f"  roc_auc  = {metrics['roc_auc']:.4f}")
+        print(f"{'─' * 50}")
+        print("\nRapport de classification :")
+        print(classification_report(y_test, preds, target_names=["Standard/Poor", "Good"]))
 
-    ConfusionMatrixDisplay(cm, display_labels=["Standard/Poor", "Good"]).plot(
-        ax=axes[0], colorbar=False
-    )
-    axes[0].set_title("Matrice de confusion")
+        # --- Matrice de confusion + Courbe ROC ---
+        cm = confusion_matrix(y_test, preds)
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
-    # --- Courbe ROC ---
-    fpr, tpr, _ = roc_curve(y_test, proba)
-    axes[1].plot(fpr, tpr, label=f"AUC = {metrics['roc_auc']:.3f}")
-    axes[1].plot([0, 1], [0, 1], "k--")
-    axes[1].set_xlabel("Taux faux positifs")
-    axes[1].set_ylabel("Taux vrais positifs")
-    axes[1].set_title("Courbe ROC")
-    axes[1].legend()
+        ConfusionMatrixDisplay(cm, display_labels=["Standard/Poor", "Good"]).plot(
+            ax=axes[0], colorbar=False
+        )
+        axes[0].set_title("Matrice de confusion")
 
-    plt.tight_layout()
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    fig_path = MODEL_DIR / "evaluation.png"
-    plt.savefig(fig_path)
-    plt.show()
-    print(f"\nGraphiques sauvegardes : {fig_path}")
+        fpr, tpr, _ = roc_curve(y_test, proba)
+        axes[1].plot(fpr, tpr, label=f"AUC = {metrics['roc_auc']:.3f}")
+        axes[1].plot([0, 1], [0, 1], "k--")
+        axes[1].set_xlabel("Taux faux positifs")
+        axes[1].set_ylabel("Taux vrais positifs")
+        axes[1].set_title("Courbe ROC")
+        axes[1].legend()
 
-    # TODO (S5-4) : logger les parametres avec mlflow.log_params
-    # TODO (S5-5) : logger les metriques avec mlflow.log_metrics
-    # TODO (S5-6) : logger le modele avec mlflow.sklearn.log_model
-    # TODO (S5-7 bonus) : logger evaluation.png comme artefact MLflow
+        plt.tight_layout()
+        MODEL_DIR.mkdir(parents=True, exist_ok=True)
+        fig_path = MODEL_DIR / "evaluation.png"
+        plt.savefig(fig_path)
+        plt.close()
+        print(f"\nGraphiques sauvegardes : {fig_path}")
 
-    # --- Sauvegarde du modele ---
-    model_path = MODEL_DIR / "model.joblib"
-    joblib.dump(model, model_path)
-    print(f"Modele sauvegarde    : {model_path}")
+        # --- Logging MLflow ---
+        mlflow.log_metrics(metrics)
+        mlflow.sklearn.log_model(model, "model")
+        mlflow.log_artifact(str(fig_path))
+
+        # --- Sauvegarde locale ---
+        model_path = MODEL_DIR / "model.joblib"
+        joblib.dump(model, model_path)
+        print(f"Modele sauvegarde    : {model_path}")
 
     return metrics
 
