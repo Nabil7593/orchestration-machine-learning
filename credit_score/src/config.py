@@ -53,7 +53,7 @@ CATEGORICAL_FEATURES: list[str] = [
 RANDOM_STATE = 42
 
 # Surcouche via variables d'environnement (principe 12-factor)
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:////tmp/mlflow.db")
 MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "credit-score-baseline")
 MODEL_NAME = os.getenv("MODEL_NAME", "credit-score-classifier")
 
