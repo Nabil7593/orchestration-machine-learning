@@ -47,10 +47,13 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
     n0, n1 = (y_test == 0).sum(), (y_test == 1).sum()
     print(f"Classes - 0 (Standard/Poor) : {n0}  |  1 (Good) : {n1}")
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:///tmp/mlflow"))
-    mlflow.set_experiment("credit-score-baseline")
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "file:///tmp/mlflow")
+    mlflow.set_tracking_uri(tracking_uri)
+    experiment = mlflow.set_experiment("credit-score-baseline")
+    print(f"\nMLflow URI={tracking_uri} | experiment_id={experiment.experiment_id}")
 
-    with mlflow.start_run():
+    with mlflow.start_run(experiment_id=experiment.experiment_id) as run:
+        print(f"MLflow run_id={run.info.run_id}")
         mlflow.log_params({"C": c, "max_iter": max_iter, "model": "LogisticRegression"})
 
         # --- Entrainement ---
