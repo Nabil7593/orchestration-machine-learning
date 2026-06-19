@@ -98,10 +98,9 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
         plt.close()
         print(f"\nGraphiques sauvegardes : {fig_path}")
 
-        # --- Logging MLflow ---
+        # --- Logging MLflow (metriques + params uniquement) ---
         mlflow.log_metrics(metrics)
-        mlflow.sklearn.log_model(model, "model")
-        mlflow.log_artifact(str(fig_path))
+        mlflow.set_tag("model_path", str(MODEL_DIR / "model.joblib"))
 
         # --- Sauvegarde locale ---
         model_path = MODEL_DIR / "model.joblib"
