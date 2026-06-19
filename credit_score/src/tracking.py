@@ -26,8 +26,8 @@ from config import (
 logger = logging.getLogger(__name__)
 
 
-def setup_experiment() -> None:
-    """Configurer le tracking MLflow et les metadonnees de l'experience."""
+def setup_experiment() -> str:
+    """Configurer le tracking MLflow et retourner l'experiment_id."""
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     experiment = mlflow.set_experiment(MLFLOW_EXPERIMENT)
     client = mlflow.MlflowClient()
@@ -40,10 +40,12 @@ def setup_experiment() -> None:
     for key, value in MLFLOW_EXPERIMENT_TAGS.items():
         client.set_experiment_tag(experiment.experiment_id, key, value)
     logger.info(
-        "MLflow tracking : %s | experience : %s",
+        "MLflow tracking : %s | experience : %s | experiment_id : %s",
         MLFLOW_TRACKING_URI,
         MLFLOW_EXPERIMENT,
+        experiment.experiment_id,
     )
+    return experiment.experiment_id
 
 
 def log_dataset(df: pd.DataFrame, context: str, name: str = "dataset") -> None:

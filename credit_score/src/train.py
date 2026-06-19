@@ -97,11 +97,16 @@ def train(c: float = 1.0, max_iter: int = 1000) -> dict:
         plt.tight_layout()
         MODEL_DIR.mkdir(parents=True, exist_ok=True)
         fig_path = MODEL_DIR / "evaluation.png"
-        plt.savefig(fig_path)
-        plt.close()
+        plt.savefig(fig_path, dpi=100, bbox_inches="tight")
+        mlflow.log_figure(fig, "evaluation.png")
+        plt.close(fig)
         print(f"\nGraphiques sauvegardes : {fig_path}")
 
-        # --- Logging MLflow (metriques + params uniquement) ---
+        # Rapport classification
+        report = classification_report(y_test, preds, target_names=["Standard/Poor", "Good"])
+        mlflow.log_text(report, "classification_report.txt")
+
+        # --- Logging MLflow (metriques + params) ---
         mlflow.log_metrics(metrics)
         mlflow.set_tag("model_path", str(MODEL_DIR / "model.joblib"))
 

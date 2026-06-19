@@ -282,8 +282,9 @@ def optimize(n_trials: int = 30, cv: int = 5, use_mlflow: bool = True) -> list[F
     logger.info("Train : %d lignes | Test : %d lignes", len(x_train), len(x_test))
     logger.info("Classes - 0: %d | 1 (Good): %d", (y_test == 0).sum(), (y_test == 1).sum())
 
+    experiment_id = None
     if use_mlflow:
-        setup_experiment()
+        experiment_id = setup_experiment()
 
     results = [
         optimize_family(spec, x_train, y_train, x_test, y_test, n_trials=n_trials, cv=cv)
@@ -295,7 +296,7 @@ def optimize(n_trials: int = 30, cv: int = 5, use_mlflow: bool = True) -> list[F
     logger.info("Meilleure famille : %s (test_roc_auc=%.3f)", best.spec.name, best.test_roc_auc)
 
     if use_mlflow:
-        with mlflow.start_run(run_name="optuna-compare"):
+        with mlflow.start_run(run_name="optuna-compare", experiment_id=experiment_id):
             mlflow.log_param("n_trials", n_trials)
             mlflow.log_param("cv", cv)
             mlflow.set_tag("best_model", best.spec.name)

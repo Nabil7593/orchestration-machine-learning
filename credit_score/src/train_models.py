@@ -242,8 +242,9 @@ def train_all(cv: int = 5, scoring: str = "roc_auc", use_mlflow: bool = True) ->
     logger.info("Train : %d lignes | Test : %d lignes", len(x_train), len(x_test))
     logger.info("Classes - 0: %d | 1 (Good): %d", (y_test == 0).sum(), (y_test == 1).sum())
 
+    experiment_id = None
     if use_mlflow:
-        setup_experiment()
+        experiment_id = setup_experiment()
 
     results = [
         optimize_model(spec, x_train, y_train, x_test, y_test, cv=cv, scoring=scoring)
@@ -255,7 +256,7 @@ def train_all(cv: int = 5, scoring: str = "roc_auc", use_mlflow: bool = True) ->
     logger.info("Meilleur modele : %s (roc_auc=%.4f  f1=%.4f)", best.name, best.roc_auc, best.f1)
 
     if use_mlflow:
-        with mlflow.start_run(run_name="compare-models"):
+        with mlflow.start_run(run_name="compare-models", experiment_id=experiment_id):
             mlflow.log_param("cv", cv)
             mlflow.log_param("scoring", scoring)
             mlflow.set_tag("best_model", best.name)
